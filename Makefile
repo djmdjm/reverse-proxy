@@ -1,4 +1,4 @@
-INSTALL="install -o root -g wheel"
+INSTALL=install -o root -g wheel
 
 all: reverse-proxy
 
