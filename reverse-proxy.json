@@ -1,0 +1,30 @@
+{
+	"PrivdropUser": "reverse-proxy",
+	"ProxyConfigs": [
+		{
+			"Address": "127.0.0.1:443",
+			"TLS": true,
+			"Comment": "Example HTTPS to HTTP proxy",
+			"Backend": "http://127.0.0.1:8000/",
+			"TLSCert": "/etc/ssl/example.com.fullchain.pem",
+			"TLSKey": "/etc/ssl/private/example.com.key",
+			"AllowHost": [
+				"example.com"
+			]
+		},
+		{
+			"Address": "127.0.0.1:80",
+			"TLS": false,
+			"Comment": "Example HTTP to HTTP proxy",
+			"Backend": "http://127.0.0.1:8000/",
+			"TLSCert": "",
+			"TLSKey": "",
+			"AllowHost": [
+				"example.com"
+			],
+			"ResponseSetHeaders": {
+				"Strict-Transport-Security": "max-age=86400"
+			}
+		}
+	]
+}
