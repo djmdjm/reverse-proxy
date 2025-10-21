@@ -206,6 +206,8 @@ func prepareInstance(proxyConfig *ProxyConfig, forbidURL *url.URL, testOnly bool
 		Listener:    listener,
 		Server: &http.Server{
 			Handler: &httputil.ReverseProxy{
+				// This is where most of the magic (such as it
+				// is) happens.
 				Rewrite: func(pr *httputil.ProxyRequest) {
 					_, ok := allowedHosts[pr.In.Host]
 					if !ok {
@@ -283,10 +285,9 @@ func main() {
 		os.Exit(0)
 	}
 
-	var err error
 	state := State{Proxies: map[string]*ProxyInstance{}}
 
-	// Load config.
+	var err error
 	state.Config, err = loadConfiguration(*configPath)
 	if err != nil {
 		log.Fatal(err)
