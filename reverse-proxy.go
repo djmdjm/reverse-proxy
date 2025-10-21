@@ -1,13 +1,14 @@
-// Binary reverse-proxy is a simple reverse proxy. It listens using TLS or TCP
-// on specified addresses/ports and will proxy all incoming requests to
-// corresponding backend servers. Headers may be set on the way back out,
-// e.g. to enable Strict-Transport-Security on plain HTTP connections.
+// Binary reverse-proxy is a simple reverse proxy. It listens
+// using TLS or plain TCP on specified addresses/ports and
+// will proxy all incoming requests to corresponding backend
+// servers. Headers may be set on the way back out, e.g. to enable
+// Strict-Transport-Security on plain HTTP connections.
 //
-// It may be started as root and will drop privileges after reading the
-// TLS key material and setting up the listeners.
+// It may be started as root and will drop privileges after reading
+// the TLS key material and setting up the listeners.
 //
-// Configuration is via a JSON blob; it's not pretty, but it avoid any
-// dependencies outside the Go standard library.
+// Configuration is via a JSON blob; it's not pretty, but it avoid
+// any dependencies outside the Go standard library.
 package main
 
 import (
