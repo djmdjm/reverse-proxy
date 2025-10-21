@@ -1,6 +1,9 @@
 # Simple reverse proxy
 
 This is a simple privilege-dropping, HTTPS/HTTP to HTTP reverse proxy.
+Most of the magic is Golang's excellent
+[httputil.ReverseProxy](https://pkg.go.dev/net/http/httputil#ReverseProxy)
+code.
 
 It supports multiple listeners with independant TLS keys/certificates
 that each relay to separate HTTP backends. It can optionally override
