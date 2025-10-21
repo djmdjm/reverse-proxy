@@ -15,7 +15,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"path/filepath"
 	"flag"
 	"fmt"
 	"log"
@@ -27,6 +26,7 @@ import (
 	"os"
 	"os/signal"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -201,23 +201,25 @@ func prepareInstance(proxyConfig *ProxyConfig, forbidURL *url.URL, testOnly bool
 			return nil
 		}
 	}
+	rewriter := func(pr *httputil.ProxyRequest) {
+		_, ok := allowedHosts[pr.In.Host]
+		if !ok {
+			// ReverseProxy offers no simple way to refuse a
+			// request, so instead we send them to a dediated
+			// server that always returns HTTP 403 Forbidden.
+			pr.SetURL(forbidURL)
+			return
+		}
+		pr.SetXForwarded()
+		pr.SetURL(targetURL)
+		pr.Out.Host = pr.In.Host
+	}
 	instance := &ProxyInstance{
 		ProxyConfig: proxyConfig,
 		Listener:    listener,
 		Server: &http.Server{
 			Handler: &httputil.ReverseProxy{
-				// This is where most of the magic (such as it
-				// is) happens.
-				Rewrite: func(pr *httputil.ProxyRequest) {
-					_, ok := allowedHosts[pr.In.Host]
-					if !ok {
-						pr.SetURL(forbidURL)
-						return
-					}
-					pr.SetXForwarded()
-					pr.SetURL(targetURL)
-					pr.Out.Host = pr.In.Host
-				},
+				Rewrite: rewriter,
 				ModifyResponse: responseModifier,
 			},
 		},
@@ -259,7 +261,7 @@ func Forbidden(w http.ResponseWriter, r *http.Request) {
 }
 
 // forbiddenServer returns a http.Server that always returns HTTP 403.
-// This server listens on a locally-bound random port, and the addr:port
+// This server listens on a locally-bound random port, and the listener
 // for it is returned too.
 func forbiddenServer() (*http.Server, net.Listener, error) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
@@ -299,7 +301,7 @@ func main() {
 
 	// Prepare a server that exists just to forbid requests. We need this
 	// because httputil.ReverseProxy doesn't provide any way to refuse a
-	// single request.
+	// single request, so instead we redirect such requsts here.
 	var forbidServer *http.Server
 	var forbidListener net.Listener
 	var forbidURL *url.URL
