@@ -3,7 +3,7 @@
 This is a simple privilege-dropping, HTTPS/HTTP to HTTP reverse proxy.
 
 It supports multiple listeners with independant TLS keys/certificates
-that each relay to a single HTTP backend. It can optionally override
+that each relay to separate HTTP backends. It can optionally override
 response headers returned by the backend.
 
 The configuration is via JSON. Note that the proxy will only relay
@@ -27,4 +27,3 @@ that.
 
 This was written in a few hours for my specific needs, but a few people
 asked about it so I've made it public.
-
