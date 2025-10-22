@@ -151,7 +151,7 @@ func dropPrivilege(username string) error {
 // prepareInstance prepares state for a single proxy instance. This includes
 // loading TLS key material, preparing the listening socket on the specified
 // address/port and preparing a http.Server object.
-func prepareInstance(proxyConfig *ProxyConfig, forbidURL *url.URL, testOnly bool) (*ProxyInstance, error) {
+func prepareInstance(proxyConfig *ProxyConfig, forbidURL *url.URL, logger *log.Logger, testOnly bool) (*ProxyInstance, error) {
 	targetURL, err := url.Parse(proxyConfig.Backend)
 	if err != nil {
 		return nil, fmt.Errorf("invalid backend URL in proxy %q: %w", proxyConfig.Address, err)
@@ -218,8 +218,10 @@ func prepareInstance(proxyConfig *ProxyConfig, forbidURL *url.URL, testOnly bool
 		ProxyConfig: proxyConfig,
 		Listener:    listener,
 		Server: &http.Server{
+			ErrorLog: logger,
 			Handler: &httputil.ReverseProxy{
-				Rewrite: rewriter,
+				Rewrite:        rewriter,
+				ErrorLog:       logger,
 				ModifyResponse: responseModifier,
 			},
 		},
@@ -233,7 +235,8 @@ type FilteringLogger struct{}
 
 // Write implements the log.Logger contract. It will filter a bunch of stuff
 // that is noisy and useless in logs (e.g. clients that disconnect without
-// completing TLS handshakes). Cf. https://github.com/golang/go/issues/26918
+// completing TLS handshakes).
+// This is a bit of a hack, see https://github.com/golang/go/issues/26918
 func (*FilteringLogger) Write(p []byte) (int, error) {
 	m := string(p)
 	if m == "http: proxy error: context canceled" {
@@ -316,6 +319,11 @@ func main() {
 		}
 	}
 
+	// Prepare a logger that drops some known some logspam that we don't
+	// care about, e.g. clients that EOF before completing the TLS
+	// handshake.
+	filteringLogger := newFilteringLogger()
+
 	// Prepare listeners and HTTP proxy servers for each proxy defined
 	// in the configuration file.
 	for i := range state.Config.ProxyConfigs {
@@ -323,7 +331,7 @@ func main() {
 		if state.Proxies[proxyConfig.Address] != nil {
 			log.Fatalf("Config contains multiple proxies for address %q", proxyConfig.Address)
 		}
-		instance, err := prepareInstance(proxyConfig, forbidURL, *configTest || *configDump)
+		instance, err := prepareInstance(proxyConfig, forbidURL, filteringLogger, *configTest || *configDump)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -360,13 +368,6 @@ func main() {
 		}
 		defer syslogger.Close()
 		log.SetOutput(syslogger)
-	}
-
-	// Arrange to drop some logspam, e.g. clients that EOF before completing
-	// the TLS handshake.
-	filteringLogger := newFilteringLogger()
-	for _, proxy := range state.Proxies {
-		proxy.Server.ErrorLog = filteringLogger
 	}
 
 	var wg sync.WaitGroup
